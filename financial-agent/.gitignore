@@ -1,0 +1,16 @@
+# Variáveis de ambiente e segredos
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Dados locais / volumes
+*.log
+db_data/
+
+# Editor
+.vscode/
+.idea/

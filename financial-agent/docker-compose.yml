@@ -1,0 +1,60 @@
+version: "3.9"
+
+services:
+  # Banco de dados principal — Postgres com extensão TimescaleDB
+  # para lidar bem com séries temporais (preços históricos, indicadores).
+  db:
+    image: timescale/timescaledb:latest-pg16
+    container_name: financial-agent-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-agente}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-financeiro}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./sql/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agente}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Interface web opcional para inspecionar o banco durante o desenvolvimento.
+  # Pode ser removida/desativada quando for pra produção no VPS.
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: financial-agent-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-changeme}
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+  # Serviço dos coletores (ingestão). Roda os scripts Python agendados.
+  # Por enquanto sobe junto com o resto; o agendamento (cron) entra depois.
+  collector:
+    build:
+      context: ./coletores
+      dockerfile: Dockerfile
+    container_name: financial-agent-collector
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./coletores:/app
+    command: ["python", "-u", "main.py"]
+
+volumes:
+  db_data:
+  pgadmin_data:
