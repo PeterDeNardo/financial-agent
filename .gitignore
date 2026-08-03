@@ -14,3 +14,7 @@ db_data/
 # Editor
 .vscode/
 .idea/
+
+# Opencode / Vault (organização interna do agente)
+.opencode/
+vault/
