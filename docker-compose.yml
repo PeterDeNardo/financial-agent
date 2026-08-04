@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # Banco de dados principal — Postgres com extensão TimescaleDB
   # para lidar bem com séries temporais (preços históricos, indicadores).
@@ -10,14 +8,14 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-agente}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-      POSTGRES_DB: ${POSTGRES_DB:-financeiro}
+      POSTGRES_DB: ${POSTGRES_DB:-dados-levantados-financeiro}
     ports:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./sql/init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agente}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agente} -d ${POSTGRES_DB:-dados-levantados-financeiro}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -42,18 +40,20 @@ services:
   # Por enquanto sobe junto com o resto; o agendamento (cron) entra depois.
   collector:
     build:
-      context: ./coletores
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: coletores/Dockerfile
     container_name: financial-agent-collector
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      - COLLECT_ON_STARTUP=true
     depends_on:
       db:
         condition: service_healthy
     volumes:
-      - ./coletores:/app
-    command: ["python", "-u", "main.py"]
+      - ./coletores:/app/coletores
+    command: ["python", "-u", "-m", "coletores.main"]
 
 volumes:
   db_data:

@@ -2,9 +2,11 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY coletores/requirements.txt coletores/requirements.txt
+RUN pip install --no-cache-dir -r coletores/requirements.txt
 
-COPY . .
+COPY coletores/ /app/coletores/
 
-CMD ["python", "-u", "main.py"]
+WORKDIR /app
+
+CMD ["python", "-m", "coletores.main"]
